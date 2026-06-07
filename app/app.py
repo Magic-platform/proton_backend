@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Header,HTTPException
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from actions import send_email,get_inbox
+from dotenv import load_dotenv
+import os
 
-
+load_dotenv()
 app = FastAPI()
+API_TOKEN = os.environ["API_TOKEN"]
 
 
 class SendEmailRequest(BaseModel):
@@ -44,8 +47,17 @@ class InboxResponse(BaseModel):
     messages: list[InboxMessage]
     count: int
 
+
+def check_auth(authorization : str | None):
+    if authorization != f"Bearer {API_TOKEN}":
+        raise HTTPException(status_code=401,detail="unauthorized")
+
+
 @app.post("/send",response_model=SendEmailResponse)
-async def send(request : SendEmailRequest):
+async def send(request : SendEmailRequest,authorization : str | None = Header(default=None)):
+
+    check_auth(authorization=authorization)
+
     await send_email(
         request.to,
         request.subject,
@@ -59,8 +71,12 @@ async def send(request : SendEmailRequest):
 def get_inbox_route(
     limit : int = 20,
     mailbox : str = "INBOX",
-    unread_only : bool = False
+    unread_only : bool = False,
+    authorization : str | None = Header(default=None)
 ):
+    
+    check_auth(authorization)
+
     messages = get_inbox(
         limit,
         mailbox=mailbox,
@@ -71,4 +87,3 @@ def get_inbox_route(
         messages=messages,
         count=len(messages)
     )
-

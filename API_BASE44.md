@@ -144,7 +144,8 @@ Reponse :
       "answered": false,
       "flagged": false,
       "snippet": "Bonjour, je souhaite prendre rendez-vous...",
-      "body_text": "Bonjour, je souhaite prendre rendez-vous..."
+      "body_text": "Bonjour, je souhaite prendre rendez-vous...",
+      "body_html": "<div>Bonjour, je souhaite prendre rendez-vous...</div>"
     }
   ],
   "count": 1,
@@ -204,8 +205,11 @@ const nextPage = await res.json();
 - `bcc` fonctionne pour l'envoi, mais n'apparait jamais dans les emails recus.
 - `/inbox` lit les mails avec `BODY.PEEK`, donc il ne marque pas les emails comme lus.
 - `uid` est l'identifiant a stocker cote Base44 pour reconnaitre un email.
+- `body_text` contient la version texte quand l'email fournit une partie `text/plain`.
+- `body_html` contient le HTML brut quand l'email fournit une partie `text/html`.
+- Si `include_body=false`, `body_text`, `body_html` et `snippet` sont retournes a `null`.
 - Pour un affichage rapide : utiliser `include_body=false`.
-- Pour exploiter le contenu dans une automatisation ou une IA : utiliser `include_body=true`.
+- Pour exploiter le contenu complet : utiliser `include_body=true`.
 
 ## Variables A Stocker Cote Base44
 

@@ -41,6 +41,7 @@ class InboxMessage(BaseModel):
     flagged: bool
     snippet: str | None = None
     body_text: str | None = None
+    body_html: str | None = None
 
 
 class InboxResponse(BaseModel):

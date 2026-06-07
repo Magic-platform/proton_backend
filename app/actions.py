@@ -94,6 +94,23 @@ def extract_text_body(message):
     return None
 
 
+def extract_html_body(message):
+    if message.is_multipart():
+        for part in message.walk():
+            if part.get_content_disposition() == "attachment":
+                continue
+
+            if part.get_content_type() == "text/html":
+                return part.get_content()
+
+        return None
+
+    if message.get_content_type() == "text/html":
+        return message.get_content()
+
+    return None
+
+
 def make_snippet(text: str | None, max_length: int = 240):
     if not text:
         return None
@@ -157,6 +174,7 @@ def get_inbox(
             flags = data.get(b"FLAGS", ())
             parsed = email.message_from_bytes(raw_email, policy=policy.default)
             body_text = extract_text_body(parsed) if include_body else None
+            body_html = extract_html_body(parsed) if include_body else None
 
             messages.append({
                 "uid": str(uid),
@@ -171,6 +189,7 @@ def get_inbox(
                 "flagged": b"\\Flagged" in flags,
                 "snippet": make_snippet(body_text),
                 "body_text": body_text,
+                "body_html": body_html,
             })
 
         has_more = total_matching > len(selected_uids)

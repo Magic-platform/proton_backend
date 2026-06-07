@@ -46,6 +46,8 @@ class InboxMessage(BaseModel):
 class InboxResponse(BaseModel):
     messages: list[InboxMessage]
     count: int
+    has_more: bool
+    next_before_uid: str | None = None
 
 
 def check_auth(authorization : str | None):
@@ -69,9 +71,11 @@ async def send(request : SendEmailRequest,authorization : str | None = Header(de
 
 @app.get("/inbox",response_model=InboxResponse)
 def get_inbox_route(
-    limit : int = 20,
+    limit : int = 100,
     mailbox : str = "INBOX",
     unread_only : bool = False,
+    before_uid : int | None = None,
+    include_body : bool = True,
     authorization : str | None = Header(default=None)
 ):
     
@@ -81,9 +85,8 @@ def get_inbox_route(
         limit,
         mailbox=mailbox,
         unread_only=unread_only, 
+        before_uid=before_uid,
+        include_body=include_body,
     )
 
-    return InboxResponse(
-        messages=messages,
-        count=len(messages)
-    )
+    return InboxResponse(**messages)

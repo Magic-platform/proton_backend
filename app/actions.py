@@ -106,8 +106,15 @@ def make_snippet(text: str | None, max_length: int = 240):
     return cleaned[:max_length] + "..."
 
 
-def get_inbox(limit: int = 20, mailbox: str = "INBOX", unread_only: bool = False):
-    limit = max(1, min(limit, 50))
+def get_inbox(
+    limit: int = 100,
+    mailbox: str = "INBOX",
+    unread_only: bool = False,
+    before_uid: int | None = None,
+    include_body: bool = True,
+):
+    max_limit = 200 if include_body else 1000
+    limit = max(1, min(limit, max_limit))
     criteria = ["UNSEEN"] if unread_only else ["ALL"]
 
     with IMAPClient(
@@ -125,20 +132,31 @@ def get_inbox(limit: int = 20, mailbox: str = "INBOX", unread_only: bool = False
         client.select_folder(mailbox, readonly=True)
 
         uids = client.search(criteria)
-        uids = uids[-limit:]
 
-        if not uids:
-            return []
+        if before_uid is not None:
+            uids = [uid for uid in uids if uid < before_uid]
 
-        raw_messages = client.fetch(uids, ["BODY.PEEK[]", "FLAGS"])
+        total_matching = len(uids)
+        selected_uids = uids[-limit:]
+
+        if not selected_uids:
+            return {
+                "messages": [],
+                "count": 0,
+                "has_more": False,
+                "next_before_uid": None,
+            }
+
+        fetch_parts = ["BODY.PEEK[]", "FLAGS"] if include_body else ["BODY.PEEK[HEADER]", "FLAGS"]
+        raw_messages = client.fetch(selected_uids, fetch_parts)
         messages = []
 
-        for uid in reversed(uids):
+        for uid in reversed(selected_uids):
             data = raw_messages[uid]
-            raw_email = data[b"BODY[]"]
+            raw_email = data[b"BODY[]"] if include_body else data[b"BODY[HEADER]"]
             flags = data.get(b"FLAGS", ())
             parsed = email.message_from_bytes(raw_email, policy=policy.default)
-            body_text = extract_text_body(parsed)
+            body_text = extract_text_body(parsed) if include_body else None
 
             messages.append({
                 "uid": str(uid),
@@ -155,4 +173,12 @@ def get_inbox(limit: int = 20, mailbox: str = "INBOX", unread_only: bool = False
                 "body_text": body_text,
             })
 
-        return messages
+        has_more = total_matching > len(selected_uids)
+        next_before_uid = str(min(selected_uids)) if has_more else None
+
+        return {
+            "messages": messages,
+            "count": len(messages),
+            "has_more": has_more,
+            "next_before_uid": next_before_uid,
+        }

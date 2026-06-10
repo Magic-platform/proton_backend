@@ -13,6 +13,7 @@ class SendEmailRequest(BaseModel):
     to: list[EmailStr] = Field(..., min_length=1)
     subject: str = Field(..., min_length=1, max_length=255)
     text: str = Field(..., min_length=1)
+    html: str | None = None
     cc: list[EmailStr] = Field(default_factory=list)
     bcc: list[EmailStr] = Field(default_factory=list)
 
@@ -62,11 +63,12 @@ async def send(request : SendEmailRequest,authorization : str | None = Header(de
     check_auth(authorization=authorization)
 
     await send_email(
-        request.to,
-        request.subject,
-        request.text,
-        request.cc,
-        request.bcc
+        to=request.to,
+        subject=request.subject,
+        text=request.text,
+        html=request.html,
+        cc=request.cc,
+        bcc=request.bcc,
     )
     return SendEmailResponse(ok=True)
 

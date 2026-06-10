@@ -16,7 +16,14 @@ context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE
 
 
-async def send_email(to: list[str], subject: str, text: str, cc: list[str] | None = None, bcc: list[str] | None = None):
+async def send_email(
+    to: list[str],
+    subject: str,
+    text: str,
+    html: str | None = None,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
+):
     cc = cc or []
     bcc = bcc or []
     recipients = to + cc + bcc
@@ -33,6 +40,9 @@ async def send_email(to: list[str], subject: str, text: str, cc: list[str] | Non
 
     msg["Subject"] = subject
     msg.set_content(text)
+
+    if html:
+        msg.add_alternative(html, subtype="html")
 
     await aiosmtplib.send(
         msg,

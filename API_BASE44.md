@@ -36,7 +36,8 @@ Body :
   "cc": ["copie@example.com"],
   "bcc": ["archive@example.com"],
   "subject": "Sujet du mail",
-  "text": "Contenu texte du mail"
+  "text": "Contenu texte du mail",
+  "html": "<p>Contenu <strong>HTML</strong> du mail</p>"
 }
 ```
 
@@ -48,7 +49,10 @@ cc      optional, liste d'emails
 bcc     optional, liste d'emails caches
 subject required, string, max 255
 text    required, string
+html    optional, string HTML
 ```
+
+Si `html` est fourni, l'email est envoye en `multipart/alternative` avec une version `text/plain` et une version `text/html`. Les clients mail affichent generalement la version HTML automatiquement.
 
 Reponse succes :
 
@@ -72,7 +76,8 @@ await fetch("https://proton.api.abrakdabra.io/send", {
     cc: [],
     bcc: [],
     subject: "Bonjour",
-    text: "Message envoye depuis Base44."
+    text: "Message envoye depuis Base44.",
+    html: "<p>Message envoye depuis <strong>Base44</strong>.</p>"
   })
 });
 ```

@@ -87,6 +87,18 @@ def parse_email_date(value: str | None):
         return value
 
 
+def get_header(message, name: str):
+    try:
+        value = message.get(name)
+        return str(value) if value is not None else None
+    except Exception:
+        for header_name, raw_value in message.raw_items():
+            if header_name.lower() == name.lower():
+                return raw_value
+
+    return None
+
+
 def extract_text_body(message):
     if message.is_multipart():
         for part in message.walk():
@@ -188,12 +200,12 @@ def get_inbox(
 
             messages.append({
                 "uid": str(uid),
-                "message_id": parsed.get("Message-ID"),
-                "from": parse_one_address(parsed.get("From")),
-                "to": parse_many_addresses(parsed.get("To")),
-                "cc": parse_many_addresses(parsed.get("Cc")),
-                "subject": parsed.get("Subject"),
-                "date": parse_email_date(parsed.get("Date")),
+                "message_id": get_header(parsed, "Message-ID"),
+                "from": parse_one_address(get_header(parsed, "From")),
+                "to": parse_many_addresses(get_header(parsed, "To")),
+                "cc": parse_many_addresses(get_header(parsed, "Cc")),
+                "subject": get_header(parsed, "Subject"),
+                "date": parse_email_date(get_header(parsed, "Date")),
                 "seen": b"\\Seen" in flags,
                 "answered": b"\\Answered" in flags,
                 "flagged": b"\\Flagged" in flags,

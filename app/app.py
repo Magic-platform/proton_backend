@@ -24,7 +24,7 @@ class SendEmailResponse(BaseModel):
 
 class EmailAddress(BaseModel):
     name: str | None = None
-    email: EmailStr | None = None
+    email: str | None = None
 
 
 class InboxMessage(BaseModel):

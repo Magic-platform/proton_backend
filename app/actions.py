@@ -3,7 +3,7 @@ import os
 import ssl
 from email import policy
 from email.message import EmailMessage
-from email.utils import getaddresses, parseaddr, parsedate_to_datetime
+from email.utils import formatdate, getaddresses, make_msgid, parseaddr, parsedate_to_datetime
 
 import aiosmtplib
 from dotenv import load_dotenv
@@ -34,6 +34,8 @@ async def send_email(
     msg = EmailMessage()
     msg["From"] = os.environ["BRIDGE_USER"]
     msg["To"] = ", ".join(to)
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain=os.getenv("MAIL_MESSAGE_ID_DOMAIN", "proton.api.abrakdabra.io"))
 
     if cc:
         msg["Cc"] = ", ".join(cc)

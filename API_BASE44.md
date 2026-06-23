@@ -397,13 +397,13 @@ Quand le worker VPS termine le traitement d'un email programme, il peut notifier
 URL configuree cote VPS :
 
 ```txt
-https://app.base44.com/api/apps/6a285c32a64df82af701b747/functions/scheduledEmailWebhook
+https://expertial-hoche.abrakdabra.io/functions/scheduledEmailWebhook
 ```
 
 Configuration cote VPS :
 
 ```env
-SCHEDULED_EMAIL_WEBHOOK_URL=https://app.base44.com/api/apps/6a285c32a64df82af701b747/functions/scheduledEmailWebhook
+SCHEDULED_EMAIL_WEBHOOK_URL=https://expertial-hoche.abrakdabra.io/functions/scheduledEmailWebhook
 BASE44_WEBHOOK_SECRET=<secret>
 ```
 

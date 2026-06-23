@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Proton scheduled mail worker every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=proton-scheduled-mails.service
+
+[Install]
+WantedBy=timers.target

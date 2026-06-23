@@ -1,0 +1,10 @@
+[Unit]
+Description=Proton scheduled mail worker
+After=network.target proton-bridge.service proton-api.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/opt/backend_proton
+EnvironmentFile=/home/ubuntu/opt/backend_proton/.env
+ExecStart=/home/ubuntu/opt/backend_proton/.venv/bin/python /home/ubuntu/opt/backend_proton/process_scheduled_mails.py

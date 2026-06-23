@@ -1,12 +1,22 @@
-from fastapi import FastAPI,Header,HTTPException
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from actions import send_email,get_inbox
 from dotenv import load_dotenv
 import os
+from scheduled_store import (
+    cancel_scheduled_mail,
+    create_scheduled_mail,
+    get_scheduled_mail,
+    init_db,
+    list_scheduled_mails,
+    parse_utc_iso,
+    to_utc_iso,
+)
 
 load_dotenv()
 app = FastAPI()
 API_TOKEN = os.environ["API_TOKEN"]
+init_db()
 
 
 class SendEmailRequest(BaseModel):
@@ -20,6 +30,63 @@ class SendEmailRequest(BaseModel):
 
 class SendEmailResponse(BaseModel):
     ok: bool
+
+
+class ScheduledMailCreateRequest(BaseModel):
+    to: list[EmailStr] = Field(..., min_length=1)
+    subject: str = Field(..., min_length=1, max_length=255)
+    text: str = Field(..., min_length=1)
+    scheduled_at: str
+    html: str | None = None
+    cc: list[EmailStr] = Field(default_factory=list)
+    bcc: list[EmailStr] = Field(default_factory=list)
+    base44_email_id: str | None = None
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def validate_scheduled_at(cls, value: str) -> str:
+        try:
+            return to_utc_iso(parse_utc_iso(value))
+        except ValueError as exc:
+            raise ValueError("scheduled_at must be an ISO 8601 datetime with timezone") from exc
+
+
+class ScheduledMailResponse(BaseModel):
+    id: str
+    idempotency_key: str
+    base44_email_id: str | None = None
+    to: list[str]
+    cc: list[str] = Field(default_factory=list)
+    bcc: list[str] = Field(default_factory=list)
+    subject: str
+    text: str
+    html: str | None = None
+    scheduled_at: str
+    status: str
+    attempts: int
+    max_attempts: int
+    locked_at: str | None = None
+    last_attempt_at: str | None = None
+    sent_at: str | None = None
+    error: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class ScheduledMailCreateResponse(BaseModel):
+    id: str
+    status: str
+    scheduled_at: str
+
+
+class ScheduledMailListResponse(BaseModel):
+    items: list[ScheduledMailResponse]
+    count: int
+
+
+class ScheduledMailStatusResponse(BaseModel):
+    id: str
+    status: str
 
 
 class EmailAddress(BaseModel):
@@ -71,6 +138,85 @@ async def send(request : SendEmailRequest,authorization : str | None = Header(de
         bcc=request.bcc,
     )
     return SendEmailResponse(ok=True)
+
+
+@app.post("/scheduled-mails", response_model=ScheduledMailCreateResponse)
+def create_scheduled_mail_route(
+    request: ScheduledMailCreateRequest,
+    authorization: str | None = Header(default=None),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    check_auth(authorization=authorization)
+
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
+    mail = create_scheduled_mail(
+        idempotency_key=idempotency_key,
+        to=[str(item) for item in request.to],
+        cc=[str(item) for item in request.cc],
+        bcc=[str(item) for item in request.bcc],
+        subject=request.subject,
+        text=request.text,
+        html=request.html,
+        scheduled_at=request.scheduled_at,
+        base44_email_id=request.base44_email_id,
+    )
+
+    return ScheduledMailCreateResponse(
+        id=mail["id"],
+        status=mail["status"],
+        scheduled_at=mail["scheduled_at"],
+    )
+
+
+@app.get("/scheduled-mails", response_model=ScheduledMailListResponse)
+def list_scheduled_mails_route(
+    status: str | None = None,
+    limit: int = 50,
+    before_created_at: str | None = None,
+    authorization: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization)
+
+    try:
+        result = list_scheduled_mails(
+            status=status,
+            limit=limit,
+            before_created_at=before_created_at,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ScheduledMailListResponse(**result)
+
+
+@app.get("/scheduled-mails/{mail_id}", response_model=ScheduledMailResponse)
+def get_scheduled_mail_route(
+    mail_id: str,
+    authorization: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization)
+    mail = get_scheduled_mail(mail_id)
+
+    if mail is None:
+        raise HTTPException(status_code=404, detail="scheduled mail not found")
+
+    return ScheduledMailResponse(**mail)
+
+
+@app.post("/scheduled-mails/{mail_id}/cancel", response_model=ScheduledMailStatusResponse)
+def cancel_scheduled_mail_route(
+    mail_id: str,
+    authorization: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization)
+    mail = cancel_scheduled_mail(mail_id)
+
+    if mail is None:
+        raise HTTPException(status_code=404, detail="scheduled mail not found")
+
+    return ScheduledMailStatusResponse(id=mail["id"], status=mail["status"])
 
 @app.get("/inbox",response_model=InboxResponse)
 def get_inbox_route(

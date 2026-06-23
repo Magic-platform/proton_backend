@@ -242,3 +242,128 @@ if (!response.ok) {
 const inbox = await response.json();
 return Response.json(inbox);
 ```
+
+## Programmer Un Email
+
+```http
+POST /scheduled-mails
+Content-Type: application/json
+Authorization: Bearer TON_API_TOKEN
+Idempotency-Key: base44-email-unique-id
+```
+
+Body :
+
+```json
+{
+  "to": ["client@example.com"],
+  "cc": [],
+  "bcc": [],
+  "subject": "Sujet programme",
+  "text": "Version texte du message",
+  "html": "<p>Version <strong>HTML</strong> du message</p>",
+  "scheduled_at": "2026-06-23T15:30:00Z",
+  "base44_email_id": "optional-base44-id"
+}
+```
+
+Champs :
+
+```txt
+to               required, liste d'emails, min 1
+cc               optional, liste d'emails
+bcc              optional, liste d'emails caches
+subject          required, string, max 255
+text             required, string
+html             optional, string HTML
+scheduled_at     required, date ISO 8601 avec timezone, stockee en UTC
+base44_email_id  optional, id cote Base44
+```
+
+`Idempotency-Key` est obligatoire. Si Base44 envoie deux fois la meme cle, l'API retourne le meme email programme au lieu d'en creer un deuxieme.
+
+Reponse :
+
+```json
+{
+  "id": "uuid",
+  "status": "pending",
+  "scheduled_at": "2026-06-23T15:30:00Z"
+}
+```
+
+## Suivre Les Emails Programmes
+
+```http
+GET /scheduled-mails
+Authorization: Bearer TON_API_TOKEN
+```
+
+Query params :
+
+```txt
+status             optional: pending, processing, sent, failed, cancelled
+limit              optional, default 50, max 200
+before_created_at  optional, pagination par created_at
+```
+
+Reponse :
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "idempotency_key": "base44-email-unique-id",
+      "base44_email_id": "optional-base44-id",
+      "to": ["client@example.com"],
+      "cc": [],
+      "bcc": [],
+      "subject": "Sujet programme",
+      "text": "Version texte du message",
+      "html": "<p>Version HTML</p>",
+      "scheduled_at": "2026-06-23T15:30:00Z",
+      "status": "pending",
+      "attempts": 0,
+      "max_attempts": 3,
+      "locked_at": null,
+      "last_attempt_at": null,
+      "sent_at": null,
+      "error": null,
+      "created_at": "2026-06-23T10:00:00Z",
+      "updated_at": "2026-06-23T10:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+Detail :
+
+```http
+GET /scheduled-mails/{id}
+Authorization: Bearer TON_API_TOKEN
+```
+
+Annulation :
+
+```http
+POST /scheduled-mails/{id}/cancel
+Authorization: Bearer TON_API_TOKEN
+```
+
+Reponse :
+
+```json
+{
+  "id": "uuid",
+  "status": "cancelled"
+}
+```
+
+Notes :
+
+- Un email peut etre annule seulement avant envoi, principalement en `pending`.
+- Le VPS envoie les emails dus via un worker systemd toutes les minutes.
+- En cas d'erreur SMTP, le worker retente jusqu'a 3 fois.
+- Les statuts possibles sont `pending`, `processing`, `sent`, `failed`, `cancelled`.

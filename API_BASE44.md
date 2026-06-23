@@ -389,3 +389,54 @@ GET /scheduled-mails/{id}
 POST /scheduled-mails/{id}/cancel
 404 -> email programmé introuvable
 ```
+
+## Webhook Base44 Emails Programmes
+
+Quand le worker VPS termine le traitement d'un email programme, il peut notifier Base44 via webhook.
+
+URL configuree cote VPS :
+
+```txt
+https://app.base44.com/api/apps/6a285c32a64df82af701b747/functions/scheduledEmailWebhook
+```
+
+Configuration cote VPS :
+
+```env
+SCHEDULED_EMAIL_WEBHOOK_URL=https://app.base44.com/api/apps/6a285c32a64df82af701b747/functions/scheduledEmailWebhook
+SCHEDULED_EMAIL_WEBHOOK_SECRET=<secret>
+```
+
+Le secret est transmis uniquement en header :
+
+```txt
+X-Webhook-Secret: <secret>
+```
+
+Payload quand un email programme est envoye :
+
+```json
+{
+  "automation_id": "uuid",
+  "status": "sent",
+  "sent_at": "2026-06-23T14:30:00Z"
+}
+```
+
+Payload quand un email programme echoue definitivement :
+
+```json
+{
+  "automation_id": "uuid",
+  "status": "failed",
+  "error": "message d'erreur"
+}
+```
+
+Notes :
+
+- `automation_id` correspond exactement au `id` retourne par `POST /scheduled-mails`.
+- Le webhook est envoye seulement pour les statuts terminaux `sent` et `failed`.
+- Un retry intermediaire qui remet le mail en `pending` n'envoie pas de webhook `failed`.
+- Si Base44 ne repond pas, repond en erreur, ou timeout, le worker logge `scheduled_mail_webhook_failed` mais ne remet pas l'email en erreur.
+- `GET /scheduled-mails/{id}` reste la source de verite si Base44 doit verifier l'etat apres coup.

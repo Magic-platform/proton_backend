@@ -6,16 +6,18 @@ Base URL :
 https://proton.api.abrakdabra.io
 ```
 
-Toutes les routes necessitent le header d'authentification :
+Toutes les routes nécessitent le header d'authentification :
 
 ```txt
 Authorization: Bearer TON_API_TOKEN
 ```
 
-Reponses d'erreur communes :
+Réponses d'erreur communes :
 
 ```txt
 401 unauthorized  -> token absent ou invalide
+400 bad request   -> paramètre invalide ou header obligatoire manquant
+404 not found     -> ressource demandée introuvable
 422 validation    -> payload ou email invalide
 500 server error  -> erreur SMTP/IMAP/Proton Bridge
 ```
@@ -46,15 +48,15 @@ Champs :
 ```txt
 to      required, liste d'emails, min 1
 cc      optional, liste d'emails
-bcc     optional, liste d'emails caches
+bcc     optional, liste d'emails cachés
 subject required, string, max 255
 text    required, string
 html    optional, string HTML
 ```
 
-Si `html` est fourni, l'email est envoye en `multipart/alternative` avec une version `text/plain` et une version `text/html`. Les clients mail affichent generalement la version HTML automatiquement.
+Si `html` est fourni, l'email est envoyé en `multipart/alternative` avec une version `text/plain` et une version `text/html`. Les clients mail affichent généralement la version HTML automatiquement.
 
-Reponse succes :
+Réponse succès :
 
 ```json
 {
@@ -76,13 +78,13 @@ await fetch("https://proton.api.abrakdabra.io/send", {
     cc: [],
     bcc: [],
     subject: "Bonjour",
-    text: "Message envoye depuis Base44.",
-    html: "<p>Message envoye depuis <strong>Base44</strong>.</p>"
+    text: "Message envoyé depuis Base44.",
+    html: "<p>Message envoyé depuis <strong>Base44</strong>.</p>"
   })
 });
 ```
 
-## Recuperer La Boite Inbox
+## Récupérer La Boîte Inbox
 
 ```http
 GET /inbox
@@ -99,14 +101,14 @@ before_uid    optional, pagination
 include_body  optional, default true
 ```
 
-Limites appliquees cote backend :
+Limites appliquées côté backend :
 
 ```txt
 include_body=true   -> max 200 emails par appel
 include_body=false  -> max 1000 emails par appel
 ```
 
-Premier appel recommande :
+Premier appel recommandé :
 
 ```txt
 GET /inbox?limit=100&include_body=true
@@ -124,7 +126,7 @@ Afficher beaucoup d'emails rapidement, sans contenu complet :
 GET /inbox?limit=500&include_body=false
 ```
 
-Reponse :
+Réponse :
 
 ```json
 {
@@ -164,7 +166,7 @@ Pagination :
 ```txt
 has_more=true          -> il reste des emails plus anciens
 next_before_uid=12345  -> utiliser cette valeur dans le prochain appel
-has_more=false         -> plus rien a charger
+has_more=false         -> plus rien à charger
 ```
 
 Exemple JavaScript :
@@ -207,16 +209,16 @@ const nextPage = await res.json();
 
 ## Notes
 
-- `bcc` fonctionne pour l'envoi, mais n'apparait jamais dans les emails recus.
+- `bcc` fonctionne pour l'envoi, mais n'apparaît jamais dans les emails reçus.
 - `/inbox` lit les mails avec `BODY.PEEK`, donc il ne marque pas les emails comme lus.
-- `uid` est l'identifiant a stocker cote Base44 pour reconnaitre un email.
+- `uid` est l'identifiant à stocker côté Base44 pour reconnaître un email.
 - `body_text` contient la version texte quand l'email fournit une partie `text/plain`.
 - `body_html` contient le HTML brut quand l'email fournit une partie `text/html`.
-- Si `include_body=false`, `body_text`, `body_html` et `snippet` sont retournes a `null`.
+- Si `include_body=false`, `body_text`, `body_html` et `snippet` sont retournés à `null`.
 - Pour un affichage rapide : utiliser `include_body=false`.
 - Pour exploiter le contenu complet : utiliser `include_body=true`.
 
-## Variables A Stocker Cote Base44
+## Variables À Stocker Côté Base44
 
 ```txt
 MAIL_API_BASE_URL=https://proton.api.abrakdabra.io
@@ -259,7 +261,7 @@ Body :
   "to": ["client@example.com"],
   "cc": [],
   "bcc": [],
-  "subject": "Sujet programme",
+  "subject": "Sujet programmé",
   "text": "Version texte du message",
   "html": "<p>Version <strong>HTML</strong> du message</p>",
   "scheduled_at": "2026-06-23T15:30:00Z",
@@ -272,17 +274,19 @@ Champs :
 ```txt
 to               required, liste d'emails, min 1
 cc               optional, liste d'emails
-bcc              optional, liste d'emails caches
+bcc              optional, liste d'emails cachés
 subject          required, string, max 255
 text             required, string
 html             optional, string HTML
-scheduled_at     required, date ISO 8601 avec timezone, stockee en UTC
-base44_email_id  optional, id cote Base44
+scheduled_at     required, date ISO 8601 avec timezone, stockée en UTC
+base44_email_id  optional, id côté Base44
 ```
 
-`Idempotency-Key` est obligatoire. Si Base44 envoie deux fois la meme cle, l'API retourne le meme email programme au lieu d'en creer un deuxieme.
+`Idempotency-Key` est obligatoire. Si Base44 envoie deux fois la même clé, l'API retourne le même email programmé au lieu d'en créer un deuxième.
 
-Reponse :
+La réponse peut donc contenir un statut autre que `pending` si la clé a déjà été utilisée pour un email déjà envoyé, annulé ou échoué.
+
+Réponse :
 
 ```json
 {
@@ -292,7 +296,7 @@ Reponse :
 }
 ```
 
-## Suivre Les Emails Programmes
+## Suivre Les Emails Programmés
 
 ```http
 GET /scheduled-mails
@@ -307,7 +311,7 @@ limit              optional, default 50, max 200
 before_created_at  optional, pagination par created_at
 ```
 
-Reponse :
+Réponse :
 
 ```json
 {
@@ -319,7 +323,7 @@ Reponse :
       "to": ["client@example.com"],
       "cc": [],
       "bcc": [],
-      "subject": "Sujet programme",
+      "subject": "Sujet programmé",
       "text": "Version texte du message",
       "html": "<p>Version HTML</p>",
       "scheduled_at": "2026-06-23T15:30:00Z",
@@ -352,7 +356,7 @@ POST /scheduled-mails/{id}/cancel
 Authorization: Bearer TON_API_TOKEN
 ```
 
-Reponse :
+Réponse :
 
 ```json
 {
@@ -363,7 +367,25 @@ Reponse :
 
 Notes :
 
-- Un email peut etre annule seulement avant envoi, principalement en `pending`.
+- Un email peut être annulé seulement si son statut est `pending` ou `failed`.
+- Si l'email est déjà `sent`, `processing` ou `cancelled`, l'endpoint retourne son statut actuel sans le modifier.
 - Le VPS envoie les emails dus via un worker systemd toutes les minutes.
-- En cas d'erreur SMTP, le worker retente jusqu'a 3 fois.
+- En cas d'erreur SMTP, le worker retente jusqu'à 3 fois.
 - Les statuts possibles sont `pending`, `processing`, `sent`, `failed`, `cancelled`.
+
+Erreurs spécifiques :
+
+```txt
+POST /scheduled-mails
+400 -> header Idempotency-Key manquant
+422 -> payload invalide ou scheduled_at sans timezone
+
+GET /scheduled-mails
+400 -> status invalide
+
+GET /scheduled-mails/{id}
+404 -> email programmé introuvable
+
+POST /scheduled-mails/{id}/cancel
+404 -> email programmé introuvable
+```

@@ -26,7 +26,7 @@ MAX_JOBS_PER_RUN = 50
 
 async def notify_scheduled_mail_webhook(payload: dict) -> None:
     webhook_url = os.getenv("SCHEDULED_EMAIL_WEBHOOK_URL")
-    webhook_secret = os.getenv("SCHEDULED_EMAIL_WEBHOOK_SECRET")
+    webhook_secret = os.getenv("BASE44_WEBHOOK_SECRET")
 
     if not webhook_url:
         return

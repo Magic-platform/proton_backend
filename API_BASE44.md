@@ -404,7 +404,7 @@ Configuration cote VPS :
 
 ```env
 SCHEDULED_EMAIL_WEBHOOK_URL=https://app.base44.com/api/apps/6a285c32a64df82af701b747/functions/scheduledEmailWebhook
-SCHEDULED_EMAIL_WEBHOOK_SECRET=<secret>
+BASE44_WEBHOOK_SECRET=<secret>
 ```
 
 Le secret est transmis uniquement en header :

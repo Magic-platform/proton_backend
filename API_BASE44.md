@@ -99,6 +99,7 @@ mailbox       optional, default INBOX
 unread_only   optional, default false
 before_uid    optional, pagination
 include_body  optional, default true
+body_after_uid optional, UID minimum pour inclure body_text/body_html
 ```
 
 Limites appliquées côté backend :
@@ -118,6 +119,12 @@ Page suivante :
 
 ```txt
 GET /inbox?limit=100&include_body=true&before_uid=12345
+```
+
+Recuperer les 15 derniers mails, mais inclure le body seulement pour les UIDs superieurs a 123 :
+
+```txt
+GET /inbox?limit=15&include_body=true&body_after_uid=123
 ```
 
 Afficher beaucoup d'emails rapidement, sans contenu complet :
@@ -215,6 +222,7 @@ const nextPage = await res.json();
 - `body_text` contient la version texte quand l'email fournit une partie `text/plain`.
 - `body_html` contient le HTML brut quand l'email fournit une partie `text/html`.
 - Si `include_body=false`, `body_text`, `body_html` et `snippet` sont retournés à `null`.
+- Si `include_body=true` et `body_after_uid` est fourni, seuls les mails avec `uid > body_after_uid` ont `body_text`, `body_html` et `snippet` remplis.
 - Pour un affichage rapide : utiliser `include_body=false`.
 - Pour exploiter le contenu complet : utiliser `include_body=true`.
 

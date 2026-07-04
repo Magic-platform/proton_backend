@@ -225,6 +225,7 @@ def get_inbox_route(
     unread_only : bool = False,
     before_uid : int | None = None,
     include_body : bool = True,
+    body_after_uid : int | None = None,
     authorization : str | None = Header(default=None)
 ):
     
@@ -236,6 +237,7 @@ def get_inbox_route(
         unread_only=unread_only, 
         before_uid=before_uid,
         include_body=include_body,
+        body_after_uid=body_after_uid,
     )
 
     return InboxResponse(**messages)

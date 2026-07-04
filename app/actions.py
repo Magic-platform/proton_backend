@@ -153,6 +153,7 @@ def get_inbox(
     unread_only: bool = False,
     before_uid: int | None = None,
     include_body: bool = True,
+    body_after_uid: int | None = None,
 ):
     max_limit = 200 if include_body else 1000
     limit = max(1, min(limit, max_limit))
@@ -188,17 +189,37 @@ def get_inbox(
                 "next_before_uid": None,
             }
 
-        fetch_parts = ["BODY.PEEK[]", "FLAGS"] if include_body else ["BODY.PEEK[HEADER]", "FLAGS"]
-        raw_messages = client.fetch(selected_uids, fetch_parts)
+        partial_body_fetch = include_body and body_after_uid is not None
+
+        if partial_body_fetch:
+            raw_messages = client.fetch(selected_uids, ["BODY.PEEK[HEADER]", "FLAGS"])
+            body_uids = [uid for uid in selected_uids if uid > body_after_uid]
+            body_messages = client.fetch(body_uids, ["BODY.PEEK[]"]) if body_uids else {}
+        else:
+            fetch_parts = ["BODY.PEEK[]", "FLAGS"] if include_body else ["BODY.PEEK[HEADER]", "FLAGS"]
+            raw_messages = client.fetch(selected_uids, fetch_parts)
+            body_messages = {}
+
         messages = []
 
         for uid in reversed(selected_uids):
             data = raw_messages[uid]
-            raw_email = data[b"BODY[]"] if include_body else data[b"BODY[HEADER]"]
+            if partial_body_fetch:
+                raw_email = data[b"BODY[HEADER]"]
+                raw_body_email = body_messages.get(uid, {}).get(b"BODY[]")
+            else:
+                raw_email = data[b"BODY[]"] if include_body else data[b"BODY[HEADER]"]
+                raw_body_email = raw_email if include_body else None
+
             flags = data.get(b"FLAGS", ())
             parsed = email.message_from_bytes(raw_email, policy=policy.default)
-            body_text = extract_text_body(parsed) if include_body else None
-            body_html = extract_html_body(parsed) if include_body else None
+            parsed_body = (
+                email.message_from_bytes(raw_body_email, policy=policy.default)
+                if raw_body_email
+                else None
+            )
+            body_text = extract_text_body(parsed_body) if parsed_body else None
+            body_html = extract_html_body(parsed_body) if parsed_body else None
 
             messages.append({
                 "uid": str(uid),

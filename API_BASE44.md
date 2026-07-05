@@ -226,6 +226,72 @@ const nextPage = await res.json();
 - Pour un affichage rapide : utiliser `include_body=false`.
 - Pour exploiter le contenu complet : utiliser `include_body=true`.
 
+## Modifier Les Flags D'Un Email
+
+```http
+PATCH /emails/{uid}/flags
+Content-Type: application/json
+Authorization: Bearer TON_API_TOKEN
+```
+
+Query params :
+
+```txt
+mailbox optional, default INBOX
+```
+
+Body :
+
+```json
+{
+  "seen": true,
+  "flagged": true
+}
+```
+
+Champs :
+
+```txt
+seen     optional, true pour marquer lu, false pour marquer non lu
+flagged  optional, true pour ajouter aux favoris, false pour retirer des favoris
+```
+
+Au moins un champ doit etre fourni. Le favori correspond au flag IMAP standard `\Flagged`.
+
+Exemples :
+
+```txt
+PATCH /emails/12345/flags
+Body: { "seen": true }
+
+PATCH /emails/12345/flags
+Body: { "seen": false }
+
+PATCH /emails/12345/flags
+Body: { "flagged": true }
+
+PATCH /emails/12345/flags
+Body: { "flagged": false }
+```
+
+Reponse :
+
+```json
+{
+  "uid": "12345",
+  "mailbox": "INBOX",
+  "seen": true,
+  "flagged": true
+}
+```
+
+Erreurs specifiques :
+
+```txt
+400 -> aucun flag fourni
+404 -> email introuvable dans le dossier demande
+```
+
 ## Variables À Stocker Côté Base44
 
 ```txt

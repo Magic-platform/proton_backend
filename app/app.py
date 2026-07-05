@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
-from actions import send_email,get_inbox
+from actions import send_email,get_inbox,update_email_flags
 from dotenv import load_dotenv
 import os
 from scheduled_store import (
@@ -119,6 +119,18 @@ class InboxResponse(BaseModel):
     next_before_uid: str | None = None
 
 
+class EmailFlagsUpdateRequest(BaseModel):
+    seen: bool | None = None
+    flagged: bool | None = None
+
+
+class EmailFlagsResponse(BaseModel):
+    uid: str
+    mailbox: str
+    seen: bool
+    flagged: bool
+
+
 def check_auth(authorization : str | None):
     if authorization != f"Bearer {API_TOKEN}":
         raise HTTPException(status_code=401,detail="unauthorized")
@@ -217,6 +229,32 @@ def cancel_scheduled_mail_route(
         raise HTTPException(status_code=404, detail="scheduled mail not found")
 
     return ScheduledMailStatusResponse(id=mail["id"], status=mail["status"])
+
+
+@app.patch("/emails/{uid}/flags", response_model=EmailFlagsResponse)
+def update_email_flags_route(
+    uid: int,
+    request: EmailFlagsUpdateRequest,
+    mailbox: str = "INBOX",
+    authorization: str | None = Header(default=None),
+):
+    check_auth(authorization)
+
+    if request.seen is None and request.flagged is None:
+        raise HTTPException(status_code=400, detail="At least one flag must be provided")
+
+    try:
+        result = update_email_flags(
+            uid,
+            mailbox=mailbox,
+            seen=request.seen,
+            flagged=request.flagged,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="email not found") from exc
+
+    return EmailFlagsResponse(**result)
+
 
 @app.get("/inbox",response_model=InboxResponse)
 def get_inbox_route(

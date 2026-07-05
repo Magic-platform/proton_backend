@@ -147,6 +147,61 @@ def make_snippet(text: str | None, max_length: int = 240):
     return cleaned[:max_length] + "..."
 
 
+def update_email_flags(
+    uid: int,
+    mailbox: str = "INBOX",
+    seen: bool | None = None,
+    flagged: bool | None = None,
+):
+    if seen is None and flagged is None:
+        raise ValueError("At least one flag must be provided")
+
+    with IMAPClient(
+        host=os.getenv("BRIDGE_HOST", "127.0.0.1"),
+        port=int(os.getenv("BRIDGE_IMAP_PORT", "1143")),
+        ssl=False,
+        timeout=20,
+    ) as client:
+        client.starttls(context)
+        client.login(
+            os.environ["BRIDGE_USER"],
+            os.environ["BRIDGE_PASSWORD"],
+        )
+
+        client.select_folder(mailbox, readonly=False)
+
+        existing = client.fetch([uid], ["FLAGS"])
+
+        if uid not in existing:
+            raise LookupError("email not found")
+
+        if seen is not None:
+            if seen:
+                client.add_flags([uid], [b"\\Seen"])
+            else:
+                client.remove_flags([uid], [b"\\Seen"])
+
+        if flagged is not None:
+            if flagged:
+                client.add_flags([uid], [b"\\Flagged"])
+            else:
+                client.remove_flags([uid], [b"\\Flagged"])
+
+        updated = client.fetch([uid], ["FLAGS"])
+
+        if uid not in updated:
+            raise LookupError("email not found")
+
+        flags = updated[uid].get(b"FLAGS", ())
+
+        return {
+            "uid": str(uid),
+            "mailbox": mailbox,
+            "seen": b"\\Seen" in flags,
+            "flagged": b"\\Flagged" in flags,
+        }
+
+
 def get_inbox(
     limit: int = 100,
     mailbox: str = "INBOX",

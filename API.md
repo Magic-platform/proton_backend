@@ -464,9 +464,9 @@ POST /scheduled-mails/{id}/cancel
 404 -> email programmé introuvable
 ```
 
-## Webhook Base44 Emails Programmes
+## Webhook Emails Programmes
 
-Quand le worker VPS termine le traitement d'un email programme, il peut notifier Base44 via webhook.
+Quand le worker VPS termine le traitement d'un email programme, il peut notifier via webhook.
 
 URL configuree cote VPS :
 
@@ -478,7 +478,7 @@ Configuration cote VPS :
 
 ```env
 SCHEDULED_EMAIL_WEBHOOK_URL=https://expertial-hoche.abrakdabra.io/functions/scheduledEmailWebhook
-BASE44_WEBHOOK_SECRET=<secret>
+WEBHOOK_SECRET=<secret>
 ```
 
 Le secret est transmis uniquement en header :
